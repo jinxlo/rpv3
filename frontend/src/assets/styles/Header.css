@@ -1,0 +1,45 @@
+.header {
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  
+  .flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  
+  .login-button {
+    background: #6a1b9a; /* Give it a background color to match the app's theme */
+    color: white; /* Make the text color white for better contrast */
+    border: 1px solid #6a1b9a; /* Match the border with the background */
+    padding: 8px 16px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    cursor: pointer;
+}
+
+.login-button:hover {
+    background-color: #4a148c; /* Darken the color on hover */
+    color: white; /* Keep the text white on hover */
+}
+
+.login-button span {
+    margin-left: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.h-5 {
+    height: 20px;
+    width: 20px;
+}
