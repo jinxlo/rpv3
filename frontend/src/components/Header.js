@@ -35,8 +35,8 @@ export default function Header() {
           {/* Logo Section */}
           <a href="/" className="flex-shrink-0">
             <img
-              className="h-8 w-auto"
-              src="/placeholder.svg"
+              className="h-6 w-auto max-w-[100px] object-contain" // Adjusted height and max width for smaller logo
+              src="/cailogo.png"
               alt="Your Logo"
             />
           </a>

@@ -1,41 +1,49 @@
 .header {
     background-color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .container {
+}
+
+.container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
-  }
-  
-  .flex {
+}
+
+.flex {
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 64px;
-  }
-  
-  .login-button {
-    background: #6a1b9a; /* Give it a background color to match the app's theme */
-    color: white; /* Make the text color white for better contrast */
-    border: 1px solid #6a1b9a; /* Match the border with the background */
-    padding: 8px 16px;
-    border-radius: 5px;
+}
+
+.flex-shrink-0 img {
+    height: 40px; /* Set a fixed height for the logo */
+    width: auto; /* Maintain aspect ratio */
+    max-width: 100px; /* Ensure the logo doesn't exceed this width */
+}
+
+.login-button {
+    background: #6a1b9a;
+    color: white;
+    border: none; /* Remove border for a cleaner look */
+    padding: 6px 12px; /* Keep reduced padding */
+    border-radius: 4px; /* Slightly reduce border radius */
     display: flex;
     align-items: center;
     transition: background-color 0.3s ease, color 0.3s ease;
     cursor: pointer;
+    font-size: 13px; /* Keep reduced font size */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add subtle shadow for depth */
 }
 
 .login-button:hover {
-    background-color: #4a148c; /* Darken the color on hover */
-    color: white; /* Keep the text white on hover */
+    background-color: #4a148c;
+    color: white;
 }
 
 .login-button span {
-    margin-left: 8px;
-    font-size: 14px;
+    margin-left: 6px; /* Keep reduced margin */
+    font-size: 13px; /* Match font size with button */
     font-weight: 500;
 }
 

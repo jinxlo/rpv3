@@ -35,6 +35,9 @@
   max-height: calc(100vh - 120px);
   overflow-y: auto;
   padding: 10px;
+  justify-content: center; /* Center the grid items */
+  border: 1px solid transparent; /* Temporary border for debugging */
+  min-height: 200px; /* Ensure grid has a minimum height */
 }
 
 /* Sticky summary bar at the bottom */
@@ -45,4 +48,18 @@
   padding: 15px;
   border-top: 1px solid #ccc;
   text-align: center;
+  z-index: 10; /* Ensure it stays above other content */
+}
+
+/* Responsive adjustments for mobile devices */
+@media (max-width: 600px) {
+  .number-button {
+    width: 40px; /* Adjust button size for smaller screens */
+    height: 40px;
+    margin: 3px;
+  }
+
+  .sticky-summary {
+    padding: 10px; /* Adjust padding for smaller screens */
+  }
 }
