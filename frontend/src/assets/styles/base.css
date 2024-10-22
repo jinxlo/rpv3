@@ -1,0 +1,187 @@
+/* src/assets/styles/base.css */
+
+/* Common Layout */
+.admin-section {
+    padding: 1.5rem;
+  }
+  
+  /* Typography */
+  .page-title {
+    font-size: 1.875rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+  
+  .page-description {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Cards */
+  .card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Buttons */
+  .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .btn-primary {
+    background: #6a1b9a;
+    color: white;
+    border: none;
+  }
+  
+  .btn-primary:hover {
+    background: #4a148c;
+  }
+  
+  .btn-secondary {
+    background: white;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+  }
+  
+  .btn-secondary:hover {
+    background: #f9fafb;
+  }
+  
+  .btn-danger {
+    background: white;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+  }
+  
+  .btn-danger:hover {
+    background: #fee2e2;
+  }
+  
+  /* Forms */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-label {
+    display: block;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: border-color 0.2s ease;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: #6a1b9a;
+    box-shadow: 0 0 0 2px rgba(106, 27, 154, 0.1);
+  }
+  
+  /* Tables */
+  .table-container {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  
+  .table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  
+  .table th {
+    background: #f9fafb;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    color: #4b5563;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  /* Status Badges */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .status-success {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .status-warning {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .status-error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  /* Messages */
+  .message {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+  }
+  
+  .message.success {
+    background: #f0fdf4;
+    border: 1px solid #dcfce7;
+    color: #166534;
+  }
+  
+  .message.error {
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    color: #991b1b;
+  }
+  
+  /* Responsive utilities */
+  @media (max-width: 768px) {
+    .admin-section {
+      padding: 1rem;
+    }
+  
+    .table-container {
+      margin: 0 -1rem;
+      border-radius: 0;
+    }
+  }

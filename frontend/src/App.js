@@ -1,7 +1,11 @@
 // src/App.js
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import AdminDashboard from './pages/AdminDashboard';
+import AdminLayout from './components/layouts/AdminLayout';
+import DashboardOverview from './components/adminSections/DashboardOverview';
+import PendingPayments from './components/adminSections/PendingPayments';
+import CreateRaffle from './components/adminSections/CreateRaffle';
+import ActiveRaffles from './components/adminSections/ActiveRaffles';
 import Login from './pages/Login';
 import HomePage from './pages/HomePage';
 import SelectNumbersPage from './pages/SelectNumbersPage';
@@ -16,12 +20,28 @@ const App = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const adminStatus = localStorage.getItem('isAdmin') === 'true';
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      const adminStatus = localStorage.getItem('isAdmin') === 'true';
+      
+      setIsAuthenticated(!!token);
+      setIsAdmin(adminStatus);
+    };
 
-    setIsAuthenticated(!!token);
-    setIsAdmin(adminStatus);
+    checkAuth();
   }, [location]);
+
+  const ProtectedAdminRoute = ({ children }) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace state={{ from: location }} />;
+    }
+
+    if (!isAdmin) {
+      return <Navigate to="/" replace />;
+    }
+
+    return children;
+  };
 
   return (
     <div className="app">
@@ -32,21 +52,33 @@ const App = () => {
         <Route path="/payment-method" element={<PaymentMethodPage />} />
         <Route path="/payment-details" element={<PaymentDetailsPage />} />
         <Route path="/payment-verification" element={<PaymentVerificationPage />} />
-        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
-
-        {/* Protected Admin Route */}
-        <Route
-          path="/admin-dashboard"
+        <Route 
+          path="/login" 
           element={
-            isAuthenticated && isAdmin ? (
-              <AdminDashboard />
+            isAuthenticated ? (
+              <Navigate to={isAdmin ? "/admin" : "/"} replace />
             ) : (
-              <Navigate to="/login" replace />
+              <Login />
             )
-          }
+          } 
         />
 
-        {/* Catch-All Route */}
+        {/* Admin Routes - Now nested under /admin */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedAdminRoute>
+              <AdminLayout />
+            </ProtectedAdminRoute>
+          }
+        >
+          <Route index element={<DashboardOverview />} />
+          <Route path="pending-payments" element={<PendingPayments />} />
+          <Route path="create-raffle" element={<CreateRaffle />} />
+          <Route path="active-raffles" element={<ActiveRaffles />} />
+        </Route>
+
+        {/* Catch-all Route */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>

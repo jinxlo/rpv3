@@ -1,0 +1,61 @@
+/* src/assets/styles/adminSections/CreateRaffle.css */
+@import '../base.css';
+
+.raffle-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.raffle-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.file-input-wrapper {
+  position: relative;
+  margin-top: 1rem;
+}
+
+.file-input {
+  width: 100%;
+  padding: 1.5rem;
+  border: 2px dashed #e5e7eb;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.file-input:hover {
+  border-color: #6a1b9a;
+}
+
+.preview-image {
+  max-width: 200px;
+  margin-top: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.error-message {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .raffle-form-container {
+    padding: 1rem;
+  }
+}

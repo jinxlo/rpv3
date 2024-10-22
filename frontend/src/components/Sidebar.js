@@ -1,129 +1,78 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import io from 'socket.io-client';
-import '../assets/styles/SalesSection.css';  // Assuming this file is for styles
+// src/components/Sidebar/Sidebar.js
+import React, { useState } from 'react';
+import { Package, Home, DollarSign, Users, CalendarIcon, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import '../assets/styles/Sidebar.css';
 
-const socket = io.connect('http://localhost:5000');  // Adjust the URL as per your backend
+/**
+ * Sidebar Component
+ * Provides navigation and section management for the admin dashboard
+ * 
+ * @param {Object} props
+ * @param {Function} props.onSectionChange - Callback to handle section changes
+ * @param {Function} props.onLogout - Callback to handle logout
+ * @param {string} props.currentSection - Currently active section
+ */
+const Sidebar = ({ onSectionChange, onLogout, currentSection = 'dashboard' }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
-const SalesSection = () => {
-  const [sales, setSales] = useState([]);
-  const [message, setMessage] = useState('');
-
-  useEffect(() => {
-    // Fetch initial sales data
-    const fetchSales = async () => {
-      try {
-        const response = await axios.get('/api/sales');
-        setSales(response.data);
-      } catch (error) {
-        console.error('Error fetching sales:', error);
-        setMessage('Error fetching sales data.');
-      }
-    };
-
-    fetchSales();
-
-    // Set up real-time sales updates
-    socket.on('sales_update', (data) => {
-      setSales(data);
-    });
-
-    return () => {
-      socket.off('sales_update'); // Clean up the socket listener on unmount
-    };
-  }, []);
-
-  const handleConfirm = async (saleId) => {
-    try {
-      await axios.post(`/api/sales/${saleId}/confirm`);
-      setMessage('Sale confirmed successfully!');
-      
-      // Update the specific sale in the local state
-      setSales((prevSales) => 
-        prevSales.map((sale) =>
-          sale.id === saleId ? { ...sale, status: 'Confirmed' } : sale
-        )
-      );
-
-      socket.emit('sale_confirmed', saleId);  // Notify the server to update clients
-    } catch (error) {
-      console.error('Error confirming sale:', error);
-      setMessage('Error confirming sale.');
-    }
-  };
-
-  const handleReject = async (saleId) => {
-    try {
-      await axios.post(`/api/sales/${saleId}/reject`);
-      setMessage('Sale rejected.');
-
-      // Update the specific sale in the local state
-      setSales((prevSales) => 
-        prevSales.map((sale) =>
-          sale.id === saleId ? { ...sale, status: 'Rejected' } : sale
-        )
-      );
-
-      socket.emit('sale_rejected', saleId);  // Notify the server to update clients
-    } catch (error) {
-      console.error('Error rejecting sale:', error);
-      setMessage('Error rejecting sale.');
-    }
-  };
+  // Define navigation items
+  const menuItems = [
+    { id: 'dashboard', icon: <Home className="h-5 w-5" />, label: 'Dashboard' },
+    { id: 'sales', icon: <DollarSign className="h-5 w-5" />, label: 'Sales' },
+    { id: 'users', icon: <Users className="h-5 w-5" />, label: 'Users' },
+    { id: 'raffles', icon: <Package className="h-5 w-5" />, label: 'Raffles' },
+    { id: 'active-raffles', icon: <CalendarIcon className="h-5 w-5" />, label: 'Active Raffles' }
+  ];
 
   return (
-    <div className="sales-section">
-      <h2>Sales</h2>
-      {message && <p className="message">{message}</p>}
-      <table className="table table-striped">
-        <thead>
-          <tr>
-            <th>Purchase ID</th>
-            <th>User</th>
-            <th>Raffle</th>
-            <th>Numbers</th>
-            <th>Status</th>
-            <th>Payment Method</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sales.length > 0 ? (
-            sales.map((sale) => (
-              <tr key={sale.id}>
-                <td>{sale.id}</td>
-                <td>{sale.user_full_name}</td>
-                <td>{sale.raffle_name}</td>
-                <td>{sale.numbers_selected}</td>
-                <td>{sale.status}</td>
-                <td>{sale.payment_method}</td>
-                <td>
-                  <button
-                    className="btn btn-success btn-sm"
-                    onClick={() => handleConfirm(sale.id)}
-                    disabled={sale.status === 'Confirmed'}  // Disable if already confirmed
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleReject(sale.id)}
-                    disabled={sale.status === 'Rejected'}  // Disable if already rejected
-                  >
-                    Reject
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="7">No sales found.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+    <aside
+      className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}
+    >
+      <div className="flex h-full flex-col">
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between p-4">
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : ""}`}>
+            <Package className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-2 text-lg font-bold">RifasCAI Admin</span>}
+          </div>
+          
+          <button
+            className="collapse-button"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 space-y-2 p-2">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              className={`nav-item ${isCollapsed ? "justify-center" : "justify-start"} 
+                ${currentSection === item.id ? "active" : ""}`}
+              onClick={() => onSectionChange(item.id)}
+            >
+              {item.icon}
+              {!isCollapsed && <span className="ml-2">{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+
+        {/* Logout Button */}
+        <div className="mt-auto p-4">
+          <button
+            className={`logout-item ${isCollapsed ? "justify-center" : "justify-start"}`}
+            onClick={onLogout}
+          >
+            <LogOut className="h-5 w-5" />
+            {!isCollapsed && <span className="ml-2">Logout</span>}
+          </button>
+        </div>
+      </div>
+    </aside>
   );
 };
 
-export default SalesSection;
+export default Sidebar;

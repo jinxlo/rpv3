@@ -1,0 +1,79 @@
+/* src/assets/styles/adminSections/PendingPayments.css */
+@import '../base.css';
+
+.payments-table-wrapper {
+  overflow-x: auto;
+}
+
+.payment-amount {
+  font-weight: 600;
+  color: #111827;
+}
+
+.payment-date {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.payment-method-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #6b7280;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  min-width: 100px;
+}
+
+.confirm-button {
+  background: #6a1b9a;
+  color: white;
+}
+
+.confirm-button:hover {
+  background: #4a148c;
+}
+
+.reject-button {
+  background: white;
+  border: 1px solid #e5e7eb;
+}
+
+.reject-button:hover {
+  background: #f3f4f6;
+}
+
+.payment-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-pending .status-indicator {
+  background: #fbbf24;
+}
+
+.status-confirmed .status-indicator {
+  background: #34d399;
+}
+
+.status-rejected .status-indicator {
+  background: #ef4444;
+}
