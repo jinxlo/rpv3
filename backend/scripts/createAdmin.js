@@ -1,33 +1,48 @@
 // scripts/createAdmin.js
+require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User');
-require('dotenv').config(); // Ensure environment variables are loaded
-
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
 
 const createAdmin = async () => {
   try {
-    const adminExists = await User.findOne({ email: process.env.ADMIN_EMAIL });
-    if (adminExists) {
-      console.log('Admin account already exists.');
-      mongoose.disconnect();
-      return;
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to MongoDB');
+
+    // Check if admin exists
+    const adminEmail = process.env.ADMIN_EMAIL.toLowerCase().trim();
+    let admin = await User.findOne({ email: adminEmail });
+
+    if (admin) {
+      console.log('Updating existing admin user');
+      admin.password = process.env.ADMIN_PASSWORD;
+      admin.isAdmin = true;
+      await admin.save();
+    } else {
+      console.log('Creating new admin user');
+      admin = new User({
+        email: adminEmail,
+        password: process.env.ADMIN_PASSWORD,
+        fullName: 'Admin User',
+        idNumber: 'ADMIN123',
+        phoneNumber: '1234567890',
+        isAdmin: true
+      });
+      await admin.save();
     }
 
-    const admin = new User({
-      email: process.env.ADMIN_EMAIL,
-      password: process.env.ADMIN_PASSWORD, // This will be hashed
-      isAdmin: true,
-    });
-    await admin.save();
-    console.log('Admin account created');
-    mongoose.disconnect();
+    // Verify admin was created/updated
+    const verifyAdmin = await User.findOne({ email: adminEmail }).select('+password');
+    const passwordMatch = await verifyAdmin.comparePassword(process.env.ADMIN_PASSWORD);
+
+    console.log('\nAdmin user status:');
+    console.log('Email:', verifyAdmin.email);
+    console.log('Is Admin:', verifyAdmin.isAdmin);
+    console.log('Password Match:', passwordMatch);
+
   } catch (error) {
-    console.error('Error creating admin:', error);
-    mongoose.disconnect();
+    console.error('Error:', error);
+  } finally {
+    await mongoose.disconnect();
   }
 };
 

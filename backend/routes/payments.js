@@ -95,6 +95,7 @@ module.exports = (upload, io) => {
         const unavailableTickets = [];
 
         for (const ticketNumber of tickets) {
+          console.log(`Attempting to reserve ticket ${ticketNumber}`);
           const ticket = await Ticket.findOneAndUpdate(
             { ticketNumber, status: 'available' },
             { $set: { status: 'reserved', reservedAt: new Date(), userId: user._id } },
@@ -102,7 +103,10 @@ module.exports = (upload, io) => {
           );
 
           if (!ticket) {
+            console.log(`Ticket ${ticketNumber} is not available`);
             unavailableTickets.push(ticketNumber);
+          } else {
+            console.log(`Successfully reserved ticket ${ticketNumber}`);
           }
         }
 

@@ -4,101 +4,221 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 
-// Secret key for JWT (Store in environment variable)
+// Secret key for JWT
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Helper function to create JWT token and user response
+const createTokenResponse = (user) => {
+  const token = jwt.sign(
+    {
+      userId: user._id,
+      isAdmin: user.isAdmin,
+      email: user.email,
+      fullName: user.fullName
+    },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  return {
+    token,
+    isAdmin: user.isAdmin,
+    user: {
+      id: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      idNumber: user.idNumber,
+      phoneNumber: user.phoneNumber
+    }
+  };
+};
 
 // Login with password
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (!user || !user.password) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+    const { email, password } = req.body;
+    console.log('Login attempt for:', email);
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+    console.log('Normalized email:', normalizedEmail);
 
-    const token = jwt.sign({ userId: user._id, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, isAdmin: user.isAdmin });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Send login code
-router.post('/send-login-code', async (req, res) => {
-  const { email } = req.body;
-  try {
-    let user = await User.findOne({ email });
-
-    // If user doesn't exist, create a new user without a password
+    // Find user and explicitly select password field
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    
     if (!user) {
-      user = new User({ email });
+      console.log('User not found:', normalizedEmail);
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate a 6-digit code
-    const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Save code and expiration to user's record
-    user.loginCode = loginCode;
-    user.codeExpires = Date.now() + 10 * 60 * 1000; // Code expires in 10 minutes
-    await user.save();
-
-    // Send code via email
-    // Configure your email transport
-    const transporter = nodemailer.createTransport({
-      // Use environment variables or a secure config
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER, // Your email
-        pass: process.env.EMAIL_PASS, // Your email password or app password
-      },
+    console.log('User found:', {
+      email: user.email,
+      isAdmin: user.isAdmin,
+      hasPassword: !!user.password,
+      passwordLength: user.password?.length
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Your Login Code',
-      text: `Your login code is ${loginCode}`,
-    };
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password verification result:', isMatch);
 
-    transporter.sendMail(mailOptions, (err) => {
-      if (err) {
-        console.error('Email error:', err);
-        return res.status(500).json({ message: 'Error sending email' });
-      }
-      res.json({ message: 'Login code sent' });
+    if (!isMatch) {
+      console.log('Invalid password for:', normalizedEmail);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Create token and response
+    const response = createTokenResponse(user);
+    console.log('Login successful for:', normalizedEmail);
+
+    // Debug log the token
+    console.log('Generated token:', {
+      tokenLength: response.token.length,
+      isAdmin: response.isAdmin,
+      userId: response.user.id
     });
+
+    res.json(response);
+
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login error:', error);
+    res.status(500).json({ 
+      message: 'Server error during login',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
-// Verify login code
-router.post('/verify-login-code', async (req, res) => {
-  const { email, code } = req.body;
+// Get current user info
+router.get('/me', async (req, res) => {
   try {
-    const user = await User.findOne({ email });
-    if (
-      !user ||
-      user.loginCode !== code ||
-      user.codeExpires < Date.now()
-    ) {
-      return res.status(400).json({ message: 'Invalid or expired code' });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
     }
 
-    // Clear login code
-    user.loginCode = null;
-    user.codeExpires = null;
-    await user.save();
+    console.log('Verifying token for /me endpoint');
+    const decoded = jwt.verify(token, JWT_SECRET);
+    console.log('Decoded token:', { userId: decoded.userId, isAdmin: decoded.isAdmin });
 
-    const token = jwt.sign({ userId: user._id, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token, isAdmin: user.isAdmin });
+    const user = await User.findById(decoded.userId);
+
+    if (!user) {
+      console.log('User not found for token userId:', decoded.userId);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log('User found for /me endpoint:', {
+      id: user._id,
+      email: user.email,
+      isAdmin: user.isAdmin
+    });
+
+    res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        idNumber: user.idNumber,
+        phoneNumber: user.phoneNumber,
+        isAdmin: user.isAdmin
+      }
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Get user info error:', error);
+    res.status(401).json({ 
+      message: 'Invalid or expired token',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Forgot password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log('Password reset requested for:', email);
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    if (!user) {
+      console.log('User not found for password reset:', email);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    console.log('Generated reset token for:', email);
+    
+    // Save hashed token
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(resetToken)
+      .digest('hex');
+    user.resetPasswordExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
+    
+    await user.save();
+    console.log('Reset token saved for user:', email);
+
+    res.json({ 
+      message: 'Password reset initiated. Please contact admin to complete the process.',
+      resetToken // In production, send this via email instead
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ 
+      message: 'Error processing password reset',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Reset password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    console.log('Password reset attempt with token');
+
+    const hashedToken = crypto
+      .createHash('sha256')
+      .update(token)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      console.log('Invalid or expired reset token');
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    console.log('Valid reset token found for user:', user.email);
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Update user
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    
+    await user.save();
+    console.log('Password reset successful for user:', user.email);
+
+    res.json({ message: 'Password reset successful' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ 
+      message: 'Error resetting password',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
