@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import '../assets/styles/PaymentDetailsPage.css';
+import axios from 'axios';
 
 const PaymentDetailsPage = () => {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ const PaymentDetailsPage = () => {
     selectedNumbers: [],
     method: '',
   };
-  
+
   const [exchangeRate, setExchangeRate] = useState(null);
   const [loading, setLoading] = useState(false); // Loading state
   const [error, setError] = useState(null); // Error state
@@ -66,17 +67,18 @@ const PaymentDetailsPage = () => {
 
   const handleConfirmPayment = async (e) => {
     e.preventDefault();
-    setError(null); // Reset error state
-  
+    setError(null);
+    setLoading(true); // Start loading
+
     // Basic client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords don't match");
+      setLoading(false); // Stop loading
       return;
     }
-  
-    setLoading(true); // Start loading
-  
+
     try {
+      // Prepare form data for multipart/form-data
       const data = new FormData();
       Object.keys(formData).forEach(key => {
         if (key !== 'confirmPassword') {
@@ -86,44 +88,36 @@ const PaymentDetailsPage = () => {
       data.append('selectedNumbers', JSON.stringify(selectedNumbers));
       data.append('method', method);
       data.append('totalAmountUSD', totalAmountUSD);
-  
-      // Make the API call to create user and payment
-      const response = await api.post('/payments/create-and-pay', data, {
+
+      // Make the API call to create user and reserve tickets
+      const response = await axios.post('http://localhost:5000/api/payments/create-and-pay', data, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-  
+
       console.log('Create and Pay Response:', response.data);
-  
-      // Store the token
-      const { token, isAdmin } = response.data;
-      if (token) {
-        localStorage.setItem('token', token);
-        localStorage.setItem('isAdmin', isAdmin);
-      }
-  
-      alert('Account created and payment submitted successfully!');
-      navigate('/payment-verification'); // Navigate to verification page
-    } catch (error) {
-      console.error('User creation and payment error:', error);
-  
-      if (error.response) {
-        // Server responded with a status other than 2xx
-        console.error('Response data:', error.response.data);
-        setError(error.response.data.message || 'An error occurred');
-      } else if (error.request) {
-        // No response received
-        setError('No response from server. Please try again later.');
+
+      if (response.data.success) {
+        // Store the token
+        const { token, isAdmin } = response.data;
+        if (token) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('isAdmin', isAdmin);
+        }
+
+        alert('Account created and payment submitted successfully!');
+        navigate('/payment-verification'); // Navigate to verification page
       } else {
-        // Other errors
-        setError('Error setting up the request.');
+        setError(response.data.message || 'Payment failed.');
       }
+    } catch (error) {
+      console.error('Error in handleConfirmPayment:', error);
+      setError(error.response?.data?.message || 'Error confirming payment.');
     } finally {
-      setLoading(false); // End loading
+      setLoading(false); // Stop loading
     }
   };
-  
 
   const paymentDetails = {
     'Binance Pay': {
@@ -147,7 +141,7 @@ const PaymentDetailsPage = () => {
     <div className="payment-details-page">
       <h2>Payment Details</h2>
       <p>Payment Method: {method}</p>
-      
+
       {method === 'Binance Pay' && (
         <>
           <p>Total Amount: ${paymentDetails['Binance Pay'].amount}</p>
@@ -155,7 +149,7 @@ const PaymentDetailsPage = () => {
           <img src={paymentDetails['Binance Pay'].qrCode} alt="Binance Pay QR Code" />
         </>
       )}
-      
+
       {method === 'Pagomovil' && (
         <>
           <p>Total Amount: {paymentDetails['Pagomovil'].amount} BS</p>
@@ -174,10 +168,10 @@ const PaymentDetailsPage = () => {
       )}
 
       <h3>Create Account and Confirm Payment</h3>
-      
+
       {/* Display error message if any */}
       {error && <div className="error-message">{error}</div>}
-      
+
       <form className="payment-form" onSubmit={handleConfirmPayment}>
         <input
           type="text"
@@ -187,7 +181,7 @@ const PaymentDetailsPage = () => {
           value={formData.fullName}
           onChange={handleInputChange}
         />
-        
+
         <input
           type="text"
           name="idNumber"
@@ -196,7 +190,7 @@ const PaymentDetailsPage = () => {
           value={formData.idNumber}
           onChange={handleInputChange}
         />
-        
+
         <input
           type="tel"
           name="phoneNumber"
@@ -205,7 +199,7 @@ const PaymentDetailsPage = () => {
           value={formData.phoneNumber}
           onChange={handleInputChange}
         />
-        
+
         <input
           type="email"
           name="email"
@@ -214,7 +208,7 @@ const PaymentDetailsPage = () => {
           value={formData.email}
           onChange={handleInputChange}
         />
-        
+
         <input
           type="password"
           name="password"
@@ -223,7 +217,7 @@ const PaymentDetailsPage = () => {
           value={formData.password}
           onChange={handleInputChange}
         />
-        
+
         <input
           type="password"
           name="confirmPassword"
@@ -232,7 +226,7 @@ const PaymentDetailsPage = () => {
           value={formData.confirmPassword}
           onChange={handleInputChange}
         />
-        
+
         <label>
           Proof of Payment:
           <input
@@ -242,7 +236,7 @@ const PaymentDetailsPage = () => {
             onChange={handleProofOfPaymentChange}
           />
         </label>
-        
+
         <button type="submit" disabled={loading}>
           {loading ? 'Processing...' : 'Create Account and Confirm Payment'}
         </button>

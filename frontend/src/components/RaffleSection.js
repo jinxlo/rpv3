@@ -1,124 +1,91 @@
-import React, { useState, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { SocketContext } from '../index';
 import axios from 'axios';
-import io from 'socket.io-client';
-import '../assets/styles/RaffleSection.css';  // Assuming the CSS for this component exists
-
-const socket = io.connect('http://localhost:5000');  // Update this URL as per your backend setup
+import '../assets/styles/RaffleSection.css';
 
 const RaffleSection = () => {
-  const [raffleName, setRaffleName] = useState('');
-  const [raffleImage, setRaffleImage] = useState(null);
-  const [ticketPrice, setTicketPrice] = useState('');
-  const [totalTickets, setTotalTickets] = useState('');
-  const [message, setMessage] = useState('');
-  const [realTimeUpdates, setRealTimeUpdates] = useState({});
+  const socket = useContext(SocketContext);
+  const [raffleData, setRaffleData] = useState(null);
+  const [tickets, setTickets] = useState([]);
 
-  // Listen for real-time updates via Socket.IO
   useEffect(() => {
-    socket.on('raffle_update', (data) => {
-      setRealTimeUpdates(data);  // Update state with real-time data
+    // Fetch initial raffle data
+    const fetchRaffleData = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/raffle');
+        setRaffleData(response.data);
+      } catch (error) {
+        console.error('Error fetching raffle data:', error);
+      }
+    };
+
+    fetchRaffleData();
+
+    // Fetch all tickets
+    const fetchTickets = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/tickets');
+        setTickets(response.data);
+      } catch (error) {
+        console.error('Error fetching tickets:', error);
+      }
+    };
+
+    fetchTickets();
+
+    // Set up Socket.io listeners for real-time updates
+    socket.on('ticketsReserved', (data) => {
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
+          data.tickets.includes(ticket.ticketNumber)
+            ? { ...ticket, status: 'reserved' }
+            : ticket
+        )
+      );
     });
 
+    socket.on('ticketsReleased', (data) => {
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
+          data.tickets.includes(ticket.ticketNumber)
+            ? { ...ticket, status: 'available' }
+            : ticket
+        )
+      );
+    });
+
+    // Cleanup on unmount
     return () => {
-      socket.off('raffle_update');  // Clean up socket on component unmount
+      socket.off('ticketsReserved');
+      socket.off('ticketsReleased');
     };
-  }, []);
+  }, [socket]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Ensure an image is uploaded
-    if (!raffleImage) {
-      setMessage('Please upload an image for the raffle.');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('raffle_name', raffleName);
-    formData.append('raffle_image', raffleImage);
-    formData.append('ticket_price', ticketPrice);
-    formData.append('total_tickets', totalTickets);
-
-    try {
-      const response = await axios.post('/api/raffles', formData);
-      if (response.status === 200) {
-        setMessage('Raffle created successfully!');
-        socket.emit('raffle_created', { raffleName, ticketPrice, totalTickets });  // Emit an event
-        resetForm();  // Reset the form on success
-      } else {
-        setMessage('Failed to create raffle.');
-      }
-    } catch (error) {
-      console.error('Error creating raffle:', error);
-      setMessage('Error creating raffle, please try again.');
-    }
-  };
-
-  // Reset the form after submission
-  const resetForm = () => {
-    setRaffleName('');
-    setRaffleImage(null);
-    setTicketPrice('');
-    setTotalTickets('');
-    setMessage('');
-  };
+  // Calculate ticket statistics
+  const ticketStats = React.useMemo(() => {
+    const soldCount = tickets.filter(t => t.status === 'sold').length;
+    const reservedCount = tickets.filter(t => t.status === 'reserved').length;
+    const availableCount = tickets.filter(t => t.status === 'available').length;
+    return { soldCount, reservedCount, availableCount };
+  }, [tickets]);
 
   return (
     <div className="raffle-section">
-      <h2>Create New Raffle</h2>
-      {message && <p className="message">{message}</p>}  {/* Display any message */}
-      
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Raffle Name</label>
-          <input
-            type="text"
-            className="form-control"
-            value={raffleName}
-            onChange={(e) => setRaffleName(e.target.value)}
-            required
-          />
-        </div>
+      {raffleData ? (
+        <>
+          <h2>{raffleData.productName}</h2>
+          <img src={raffleData.productImage} alt={raffleData.productName} />
+          <p>Price: ${raffleData.price}</p>
+          <p>Total Tickets: {raffleData.totalTickets}</p>
+          <p>Sold Tickets: {ticketStats.soldCount}</p>
+          <p>Reserved Tickets: {ticketStats.reservedCount}</p>
+          <p>Available Tickets: {ticketStats.availableCount}</p>
+        </>
+      ) : (
+        <p>Loading raffle data...</p>
+      )}
 
-        <div className="form-group">
-          <label>Raffle Image</label>
-          <input
-            type="file"
-            className="form-control"
-            onChange={(e) => setRaffleImage(e.target.files[0])}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Price Per Ticket</label>
-          <input
-            type="number"
-            className="form-control"
-            value={ticketPrice}
-            onChange={(e) => setTicketPrice(e.target.value)}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label>Total Number of Tickets</label>
-          <input
-            type="number"
-            className="form-control"
-            value={totalTickets}
-            onChange={(e) => setTotalTickets(e.target.value)}
-            required
-          />
-        </div>
-
-        <button type="submit" className="btn btn-primary">Create Raffle</button>
-      </form>
-
-      <div className="real-time-updates">
-        <h3>Real-Time Updates</h3>
-        <p>{JSON.stringify(realTimeUpdates)}</p>  {/* Display real-time updates */}
-      </div>
+      {/* You can add more UI elements here to display or interact with tickets */}
     </div>
   );
 };

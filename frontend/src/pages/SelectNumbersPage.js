@@ -7,6 +7,7 @@ import '../assets/styles/SelectNumbersPage.css';
 const SelectNumbersPage = () => {
   const [tickets, setTickets] = useState([]);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
+  const [error, setError] = useState(null); // Error state to handle warnings and issues
   const navigate = useNavigate();
   const ticketPrice = 10; // Price per ticket
 
@@ -18,6 +19,7 @@ const SelectNumbersPage = () => {
         setTickets(response.data);
       } catch (error) {
         console.error('Error fetching tickets:', error);
+        setError('Error fetching tickets, please try again later.');
       }
     };
 
@@ -25,45 +27,26 @@ const SelectNumbersPage = () => {
 
     // Set up Socket.io listeners for real-time updates
     socket.on('ticketsReserved', (data) => {
-      const updatedTickets = tickets.map((ticket) => {
-        if (data.tickets.includes(ticket.ticketNumber)) {
-          return { ...ticket, status: 'reserved' }; // Status for pending payment (grey)
-        }
-        return ticket;
-      });
-      setTickets(updatedTickets);
-    });
-
-    socket.on('ticketsSold', (data) => {
-      const updatedTickets = tickets.map((ticket) => {
-        if (data.tickets.includes(ticket.ticketNumber)) {
-          return { ...ticket, status: 'sold' }; // Status for purchased (red)
-        }
-        return ticket;
-      });
-      setTickets(updatedTickets);
-    });
-
-    socket.on('ticketsReleased', (data) => {
-      const updatedTickets = tickets.map((ticket) => {
-        if (data.tickets.includes(ticket.ticketNumber)) {
-          return { ...ticket, status: 'available' }; // Status for available tickets
-        }
-        return ticket;
-      });
-      setTickets(updatedTickets);
+      setTickets((prevTickets) =>
+        prevTickets.map((ticket) =>
+          data.tickets.includes(ticket.ticketNumber)
+            ? { ...ticket, status: 'reserved' }
+            : ticket
+        )
+      );
     });
 
     // Cleanup on unmount
     return () => {
       socket.off('ticketsReserved');
-      socket.off('ticketsSold');
-      socket.off('ticketsReleased');
     };
-  }, [tickets]);
+  }, []); // UseEffect now runs only once after the component mounts
 
   const handleNumberClick = (number) => {
+    setError(null);
+
     if (selectedNumbers.includes(number)) {
+      // Remove from selected tickets
       setSelectedNumbers(selectedNumbers.filter((n) => n !== number));
     } else {
       setSelectedNumbers([...selectedNumbers, number]);
@@ -71,27 +54,26 @@ const SelectNumbersPage = () => {
   };
 
   const handleContinue = async () => {
-    try {
-      const response = await axios.post('http://localhost:5000/api/tickets/reserve', {
-        userId: 'user123', // Replace with actual user ID
-        tickets: selectedNumbers,
-      });
+    setError(null);
 
-      if (response.data.success) {
-        navigate('/payment-method', { state: { selectedNumbers } });
-      } else {
-        alert(response.data.message);
-        // Refresh tickets data
-        const ticketResponse = await axios.get('http://localhost:5000/api/tickets');
-        setTickets(ticketResponse.data);
-      }
+    if (selectedNumbers.length === 0) {
+      setError("Please select at least one ticket to continue.");
+      return;
+    }
+
+    try {
+      // Proceed to payment page without reserving tickets
+      navigate('/payment-method', { state: { selectedNumbers } });
     } catch (error) {
-      console.error('Error reserving tickets:', error);
+      console.error('Error proceeding to payment:', error);
+      setError('Error proceeding to payment, please try again later.');
     }
   };
 
   return (
     <div className="select-numbers-page">
+      {error && <div className="error-message">{error}</div>} {/* Display error message if any */}
+      
       <div className="numbers-grid">
         {tickets.map((ticket) => (
           <button
@@ -99,11 +81,10 @@ const SelectNumbersPage = () => {
             className={`number-button ${
               selectedNumbers.includes(ticket.ticketNumber) ? 'selected' : ''
             } ${
-              ticket.status === 'sold' ? 'purchased' : 
-              ticket.status === 'reserved' ? 'unavailable' : ''
+              ticket.status === 'reserved' || ticket.status === 'sold' ? 'unavailable' : ''
             }`}
             onClick={() => handleNumberClick(ticket.ticketNumber)}
-            disabled={ticket.status !== 'available'}
+            disabled={ticket.status === 'reserved' || ticket.status === 'sold'}
           >
             {ticket.ticketNumber}
           </button>

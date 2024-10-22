@@ -8,17 +8,17 @@ const Ticket = require('../models/Ticket');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const fs = require('fs'); // Add this line to import the fs module
+const fs = require('fs'); // For filesystem operations
 
 // Secret key for JWT (Store in environment variable)
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Export a function that takes multer upload middleware
-module.exports = (upload) => {
+// Export a function that takes multer upload middleware and io
+module.exports = (upload, io) => {
 
   /**
    * @route   POST /api/payments/create-and-pay
-   * @desc    Create a new user account and process payment
+   * @desc    Create a new user account and reserve selected tickets
    * @access  Public
    */
   router.post(
@@ -57,27 +57,6 @@ module.exports = (upload) => {
         totalAmountUSD,
       } = req.body;
 
-      // Parse selectedNumbers as JSON
-      let tickets = [];
-      try {
-        tickets = JSON.parse(selectedNumbers);
-        if (!Array.isArray(tickets)) throw new Error();
-      } catch (err) {
-        // If a file was uploaded, remove it since the request is invalid
-        if (req.file) {
-          fs.unlinkSync(req.file.path);
-        }
-        return res.status(400).json({ message: 'Invalid selectedNumbers format' });
-      }
-
-      // Handle file upload
-      let proofOfPaymentPath = '';
-      if (req.file) {
-        proofOfPaymentPath = `/uploads/proofs/${req.file.filename}`;
-      } else {
-        return res.status(400).json({ message: 'Proof of payment is required' });
-      }
-
       // Start a session for transaction
       const session = await mongoose.startSession();
       session.startTransaction();
@@ -104,6 +83,33 @@ module.exports = (upload) => {
 
         await user.save({ session });
 
+        // Reserve tickets using atomic update to avoid race conditions
+        let tickets = [];
+        try {
+          tickets = JSON.parse(selectedNumbers);
+          if (!Array.isArray(tickets)) throw new Error();
+        } catch (err) {
+          throw new Error('Invalid selectedNumbers format');
+        }
+
+        const unavailableTickets = [];
+
+        for (const ticketNumber of tickets) {
+          const ticket = await Ticket.findOneAndUpdate(
+            { ticketNumber, status: 'available' },
+            { $set: { status: 'reserved', reservedAt: new Date(), userId: user._id } },
+            { session, new: true }
+          );
+
+          if (!ticket) {
+            unavailableTickets.push(ticketNumber);
+          }
+        }
+
+        if (unavailableTickets.length > 0) {
+          throw new Error(`The following tickets are not available: ${unavailableTickets.join(', ')}`);
+        }
+
         // Create payment record
         const payment = new Payment({
           user: user._id, // Reference to the user
@@ -114,33 +120,20 @@ module.exports = (upload) => {
           selectedNumbers: tickets,
           method,
           totalAmountUSD: parseFloat(totalAmountUSD),
-          proofOfPayment: proofOfPaymentPath,
+          proofOfPayment: req.file ? `/uploads/proofs/${req.file.filename}` : '',
+          status: 'Pending',
         });
 
         await payment.save({ session });
-
-        // Reserve tickets
-        const availableTickets = await Ticket.find({
-          ticketNumber: { $in: tickets },
-          status: 'available',
-        }).session(session);
-
-        if (availableTickets.length !== tickets.length) {
-          throw new Error('Some selected tickets are not available');
-        }
-
-        // Update ticket status to 'reserved' and associate with user
-        await Ticket.updateMany(
-          { ticketNumber: { $in: tickets } },
-          { $set: { status: 'reserved', reservedAt: new Date(), userId: user._id } },
-          { session }
-        );
 
         // Commit the transaction
         await session.commitTransaction();
         session.endSession();
 
-        // Optionally, generate a JWT token for the user
+        // Emit event to inform all clients about the reserved tickets
+        io.emit('ticketsReserved', { tickets });
+
+        // Generate JWT token
         const token = jwt.sign(
           { userId: user._id, isAdmin: user.isAdmin },
           JWT_SECRET,
@@ -149,13 +142,16 @@ module.exports = (upload) => {
 
         // Respond with success message and token
         res.status(201).json({
+          success: true,
           message: 'Account created and payment submitted successfully',
           token,
           isAdmin: user.isAdmin,
         });
       } catch (error) {
-        // Abort the transaction on error
-        await session.abortTransaction();
+        // Only abort if the transaction hasn't been committed
+        if (session.inTransaction()) {
+          await session.abortTransaction();
+        }
         session.endSession();
 
         // If a file was uploaded, remove it since the transaction failed
@@ -164,7 +160,7 @@ module.exports = (upload) => {
         }
 
         console.error('Error in create-and-pay:', error);
-        res.status(400).json({ message: error.message || 'Server error' });
+        res.status(400).json({ success: false, message: error.message || 'Server error' });
       }
     }
   );

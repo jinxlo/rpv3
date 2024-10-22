@@ -5,26 +5,39 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .raffle-section h2 {
+}
+
+.raffle-section h2 {
     text-align: center;
     margin-bottom: 20px;
     color: #333;
-  }
-  
-  .form-group {
+}
+
+.raffle-section img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto 20px;
+}
+
+.raffle-section p {
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #555;
+}
+
+.form-group {
     margin-bottom: 20px;
-  }
-  
-  .form-control {
+}
+
+.form-control {
     padding: 10px;
     font-size: 1rem;
     border: 1px solid #ddd;
     border-radius: 4px;
-  }
-  
-  .btn-primary {
+}
+
+.btn-primary {
     width: 100%;
     padding: 10px;
     font-size: 1rem;
@@ -32,9 +45,46 @@
     border: none;
     border-radius: 4px;
     transition: background-color 0.3s ease;
-  }
-  
-  .btn-primary:hover {
+}
+
+.btn-primary:hover {
     background-color: #0056b3;
-  }
-  
+}
+
+.tickets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 5px;
+    margin-top: 20px;
+}
+
+.ticket {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ccc;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.ticket.available {
+    background-color: #90EE90; /* Light Green */
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.ticket.reserved {
+    background-color: #FFA500; /* Orange */
+    cursor: not-allowed;
+}
+
+.ticket.sold {
+    background-color: #FF6347; /* Tomato */
+    cursor: not-allowed;
+}
+
+.ticket:hover.available {
+    background-color: #76c776; /* Darker Green on hover */
+}
